@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLS Point Locator</title>
+
+    <!-- Add favicon -->
+    <!-- Option 1: Using a local file (create an "assets" folder in your project and place the icon there) -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+
+    <!-- Option 2: Using an online icon (this is a sample map icon from favicon.io) -->
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/5988/5988658.png">
+
+    <!-- Alternative formats for better browser compatibility -->
+    <link rel="apple-touch-icon" sizes="180x180" href="https://cdn-icons-png.flaticon.com/512/5988/5988658.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://cdn-icons-png.flaticon.com/512/5988/5988658.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://cdn-icons-png.flaticon.com/512/5988/5988658.png">
+
+    <!-- Existing CSS and other head elements -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <!-- Rest of your existing head content -->
+</head>
+    <!-- Previous CSS styles remain exactly the same -->
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-col {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .content {
+            display: flex;
+            min-height: 600px;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #ecf0f1;
+        }
+
+        #map {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+
+        .details-panel {
+            width: 400px;
+            background: white;
+            border-left: 1px solid #e9ecef;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .details-header {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 20px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 0;
+        }
+
+        .details-header h3 {
+            margin: 0;
+            font-size: 1.4em;
+            font-weight: 300;
+        }
+
+        .detail-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 1.1em;
+        }
+
+        .download-btn:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .no-selection {
+            text-align: center;
+            padding: 50px 20px;
+            color: #7f8c8d;
+        }
+
+        .no-selection i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .marker-popup {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .marker-popup h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+
+        .marker-popup p {
+            margin: 5px 0;
+            color: #7f8c8d;
+        }
+
+        .marker-popup .btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                flex-direction: column;
+            }
+
+            .details-panel {
+                width: 100%;
+                max-height: 400px;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .form-col {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .controls {
+                padding: 20px;
+            }
+
+            .details-panel {
+                padding: 20px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MLS Point Locator</h1>
+            <p>Find and explore MLS points across districts and mandals</p>
+            <div class="user-info" style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                <span>User: <strong id="currentUser">Nazeershaik99</strong></span> |
+                <span>Last Updated: <strong id="currentTime">2025-07-12 17:37:19</strong></span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="form-row">
+                <div class="form-col">
+                    <label for="district">Select District:</label>
+                    <select id="district" name="district">
+                        <option value="">Choose a district...</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label for="mandal">Select Mandal:</label>
+                    <select id="mandal" name="mandal" disabled>
+                        <option value="">Choose a mandal...</option>
+                    </select>
+                </div>
+                <div class="form-col">
+                    <label>&nbsp;</label>
+                    <button class="btn" onclick="loadMLSPoints()" id="loadBtn" disabled>
+                        Load MLS Points
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            <div class="details-panel">
+                <div class="no-selection">
+                    <div style="font-size: 3em; margin-bottom: 20px;">📍</div>
+                    <h3>Select an MLS Point</h3>
+                    <p>Choose a district and mandal, then click on a map marker to view detailed information.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script>
+        // Global variables
+        let map;
+        let markersGroup;
+        let currentMLSCode = null;
+        const currentUser = 'Nazeershaik99';
+        const currentTime = '2025-07-12 17:37:19';
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([16.5062, 80.6480], 8);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            markersGroup = L.layerGroup().addTo(map);
+        }
+
+        // Create marker popup content
+        function createMarkerPopup(point) {
+            return `
+                <div class="marker-popup">
+                    <h4>${point.mls_name}</h4>
+                    <p><strong>Code:</strong> ${point.mls_code}</p>
+                    <p><strong>Address:</strong> ${point.address}</p>
+                    <p><strong>Incharge:</strong> ${point.incharge_name}</p>
+                    <p><strong>Capacity:</strong> ${point.storage_capacity} MTs</p>
+                    <button class="btn" onclick="showMLSDetails('${point.mls_code}')">View Details</button>
+                </div>
+            `;
+        }
+
+        // Load districts
+        async function loadDistricts() {
+            try {
+                const response = await fetch('/api/districts');
+                if (!response.ok) throw new Error('Failed to fetch districts');
+
+                const districts = await response.json();
+                const districtSelect = document.getElementById('district');
+
+                districts.forEach(district => {
+                    const option = document.createElement('option');
+                    option.value = district['District Code'];
+                    option.textContent = district['District Name'];
+                    districtSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading districts:', error);
+                showError('Failed to load districts. Please refresh the page.');
+            }
+        }
+
+        // Load mandals
+        async function loadMandals(districtCode) {
+            try {
+                const response = await fetch(`/api/mandals/${districtCode}`);
+                if (!response.ok) throw new Error('Failed to fetch mandals');
+
+                const mandals = await response.json();
+                const mandalSelect = document.getElementById('mandal');
+                mandalSelect.innerHTML = '<option value="">Choose a mandal...</option>';
+
+                mandals.forEach(mandal => {
+                    const option = document.createElement('option');
+                    option.value = mandal['Mandal Code'];
+                    option.textContent = mandal['Mandal Name'];
+                    mandalSelect.appendChild(option);
+                });
+
+                mandalSelect.disabled = false;
+            } catch (error) {
+                console.error('Error loading mandals:', error);
+                showError('Failed to load mandals. Please try again.');
+            }
+        }
+
+        // Updated Load MLS points function
+        async function loadMLSPoints() {
+            const districtCode = document.getElementById('district').value;
+            const mandalCode = document.getElementById('mandal').value;
+
+            if (!districtCode || !mandalCode) {
+                showError('Please select both district and mandal');
+                return;
+            }
+
+            const loadBtn = document.getElementById('loadBtn');
+            loadBtn.disabled = true;
+            loadBtn.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(`/api/mls_points/${districtCode}/${mandalCode}`);
+                if (!response.ok) throw new Error('Failed to fetch MLS points');
+
+                const data = await response.json();
+
+                // Clear existing markers
+                markersGroup.clearLayers();
+
+                if (data.error) {
+                    console.error('Server error:', data.error);
+                    showError(data.message || 'Error loading MLS points');
+                    return;
+                }
+
+                if (!data.points || data.points.length === 0) {
+                    console.log('Debug info:', data.debug_info);
+                    showError('No MLS points found for selected district and mandal');
+                    return;
+                }
+
+                // Add markers to map
+                const bounds = [];
+                data.points.forEach(point => {
+                    if (point.latitude && point.longitude) {
+                        const marker = L.marker([point.latitude, point.longitude])
+                            .bindPopup(createMarkerPopup(point));
+                        markersGroup.addLayer(marker);
+                        bounds.push([point.latitude, point.longitude]);
+                    }
+                });
+
+                // Fit map to show all markers
+                if (bounds.length > 0) {
+                    map.fitBounds(bounds, { padding: [20, 20] });
+                    document.querySelector('.details-panel').innerHTML = `
+                        <div class="alert alert-info">
+                            <strong>Success!</strong> Found ${data.points.length} MLS points.
+                            <br>
+                            <small>Click on a marker to view details.</small>
+                        </div>
+                    `;
+                } else {
+                    showError('No valid coordinates found for MLS points');
+                }
+
+            } catch (error) {
+                console.error('Error loading MLS points:', error);
+                showError('Error loading MLS points. Please try again.');
+            } finally {
+                loadBtn.disabled = false;
+                loadBtn.textContent = 'Load MLS Points';
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const detailsPanel = document.querySelector('.details-panel');
+            detailsPanel.innerHTML = `
+                <div class="alert alert-warning">
+                    <strong>Notice:</strong> ${message}
+                </div>
+            `;
+        }
+
+        // Show MLS details
+        // Update the showMLSDetails function
+async function showMLSDetails(mlsCode) {
+    const detailsPanel = document.querySelector('.details-panel');
+    detailsPanel.innerHTML = '<div class="loading">Loading MLS details...</div>';
+
+    try {
+        // Log the request for debugging
+        console.log(`Fetching details for MLS code: ${mlsCode}`);
+
+        const response = await fetch(`/api/mls_details/${mlsCode}`);
+
+        // Log the response status
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const mlsData = await response.json();
+
+        // Log the received data
+        console.log('Received MLS data:', mlsData);
+
+        if (!mlsData || Object.keys(mlsData).length === 0) {
+            throw new Error('No data received from server');
+        }
+
+        detailsPanel.innerHTML = createDetailsHTML(mlsData);
+
+    } catch (error) {
+        console.error('Error loading MLS details:', error);
+        detailsPanel.innerHTML = `
+            <div class="alert alert-warning">
+                <strong>Notice:</strong> Could not load MLS details. Please try again.
+                <br>
+                <small>Error: ${error.message}</small>
+                <br>
+                <button class="btn" onclick="showMLSDetails('${mlsCode}')" style="margin-top: 10px;">
+                    🔄 Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Add this helper function to validate MLS data
+function validateMLSData(mlsData) {
+    const requiredFields = [
+        'MLS Point Code',
+        'MLS Point Name',
+        'MLS Point Address',
+        'District Name',
+        'Mandal Name'
+    ];
+
+    return requiredFields.every(field => mlsData[field]);
+}
+
+        // Create details HTML
+        function createDetailsHTML(mlsData) {
+            return `
+                <div class="details-header">
+                    <h3>${mlsData['MLS Point Name']}</h3>
+                </div>
+                ${createDetailItems(mlsData)}
+                <button class="btn download-btn" onclick="downloadPDF('${mlsData['MLS Point Code']}')">
+                    📄 Download PDF Report
+                </button>
+            `;
+        }
+
+        // Create detail items
+        function createDetailItems(mlsData) {
+            const fields = [
+                ['MLS Code', 'MLS Point Code'],
+                ['Address', 'MLS Point Address'],
+                ['District', 'District Name'],
+                ['Mandal', 'Mandal Name'],
+                ['Incharge Name', 'MLS Point Incharge Name'],
+                ['Phone Number', 'Phone Number'],
+                ['Storage Capacity', 'Storage Capacity in MTs.', ' MTs'],
+                ['Godown Area', 'Godown Area in Sq. Ft.', ' Sq. Ft.'],
+                ['Ownership', 'MLS Point Owned (or) Hired ?'],
+                ['Weighbridge Available', 'Weighbridge Available? (Yes / No)'],
+                ['CCTV Cameras', 'No. of CC Camers installed', ' cameras'],
+                ['Solar System', 'Solar System Available? (Yes/No)']
+            ];
+
+            return fields.map(([label, key, suffix = '']) => `
+                <div class="detail-item">
+                    <div class="detail-label">${label}</div>
+                    <div class="detail-value">${mlsData[key]}${suffix}</div>
+                </div>
+            `).join('');
+        }
+
+        // Download PDF
+        // Update the downloadPDF function
+async function downloadPDF(mlsCode) {
+    const detailsPanel = document.querySelector('.details-panel');
+
+    try {
+        // Show loading state
+        detailsPanel.innerHTML = `
+            <div class="loading">
+                Generating PDF report...
+            </div>
+        `;
+
+        const response = await fetch(`/api/download_pdf/${mlsCode}`);
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to generate PDF');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `MLS_Report_${mlsCode}.pdf`;
+
+        document.body.appendChild(a);
+        a.click();
+
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Show success message
+        detailsPanel.innerHTML = `
+            <div class="alert alert-success">
+                <strong>Success!</strong> PDF report has been downloaded.
+                <br>
+                <button class="btn" onclick="showMLSDetails('${mlsCode}')" style="margin-top: 10px;">
+                    ← Back to Details
+                </button>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error downloading PDF:', error);
+        detailsPanel.innerHTML = `
+            <div class="alert alert-warning">
+                <strong>Notice:</strong> Error downloading PDF. Please try again.
+                <br>
+                <small>${error.message}</small>
+                <br>
+                <button class="btn" onclick="downloadPDF('${mlsCode}')" style="margin-top: 10px;">
+                    🔄 Retry Download
+                </button>
+                <button class="btn" onclick="showMLSDetails('${mlsCode}')" style="margin-top: 10px; margin-left: 10px;">
+                    ← Back to Details
+                </button>
+            </div>
+        `;
+    }
+}
+
+        // Event listeners
+        document.getElementById('district').addEventListener('change', function() {
+            const districtCode = this.value;
+            const mandalSelect = document.getElementById('mandal');
+            const loadBtn = document.getElementById('loadBtn');
+
+            if (districtCode) {
+                loadMandals(districtCode);
+            } else {
+                mandalSelect.innerHTML = '<option value="">Choose a mandal...</option>';
+                mandalSelect.disabled = true;
+                loadBtn.disabled = true;
+            }
+
+            clearMapAndDetails();
+        });
+
+        document.getElementById('mandal').addEventListener('change', function() {
+            const loadBtn = document.getElementById('loadBtn');
+            loadBtn.disabled = !this.value;
+            if (!this.value) clearMapAndDetails();
+        });
+
+        // Clear map and details
+        function clearMapAndDetails() {
+            if (markersGroup) markersGroup.clearLayers();
+            document.querySelector('.details-panel').innerHTML = `
+                <div class="no-selection">
+                    <div style="font-size: 3em; margin-bottom: 20px;">📍</div>
+                    <h3>Select an MLS Point</h3>
+                    <p>Choose a district and mandal, then click on a map marker to view detailed information.</p>
+                </div>
+            `;
+        }
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            loadDistricts();
+
+            // Update user info
+            document.getElementById('currentUser').textContent = currentUser;
+            document.getElementById('currentTime').textContent = currentTime;
+        });
+    </script>
+</body>
+</html>
